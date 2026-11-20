@@ -1,0 +1,52 @@
+name: api-livres
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: api-livres-node:1.0.0
+    container_name: api-livres-node
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      MONGO_URI: mongodb://mongo:27017/${MONGO_DB:-livres}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - livres-network
+    labels:
+      com.atelier-docker.project: "api-livres"
+      com.atelier-docker.role: "api"
+
+  mongo:
+    image: mongo:8.0.4
+    container_name: api-livres-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-livres}
+    volumes:
+      - livres-mongo-data:/data/db
+    networks:
+      - livres-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    labels:
+      com.atelier-docker.project: "api-livres"
+      com.atelier-docker.role: "database"
+
+networks:
+  livres-network:
+    name: livres-network
+    driver: bridge
+
+volumes:
+  livres-mongo-data:
+    name: livres-mongo-data
